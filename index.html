@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#f6efe6">
+<title>🧕 Modest Atelier — style with heart</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧕</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;overflow:hidden;font-family:'Quicksand','Segoe UI',sans-serif;color:#4a3f35;
+       background:#efe6d8;display:flex;justify-content:center;align-items:center}
+  #stage{position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;
+         background:linear-gradient(180deg,#f7f0e6 0%,#f2e7d8 55%,#ead9c4 100%)}
+  /* paper grain over everything */
+  #stage::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:60;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .38 0 0 0 0 .3 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+  #scene{position:absolute;inset:0;width:100%;height:100%}
+
+  /* ---------- header ---------- */
+  #hud{position:absolute;top:calc(8px + env(safe-area-inset-top));left:10px;right:10px;z-index:20;
+       display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
+  .pill{background:rgba(255,252,246,.9);border:2px solid #d9c8b0;border-radius:999px;
+        padding:5px 12px;font-weight:700;font-size:.85rem;color:#6b5b4a;box-shadow:0 2px 8px rgba(90,70,50,.12)}
+  #modeBtns{position:absolute;top:calc(52px + env(safe-area-inset-top));left:10px;z-index:20;display:flex;gap:6px}
+  .modeBtn{font-family:inherit;font-weight:700;font-size:.78rem;border:2px solid #cbb79c;background:rgba(255,252,246,.9);
+           border-radius:999px;padding:5px 11px;color:#6b5b4a;cursor:pointer}
+  .modeBtn.on{background:#7f9c78;color:#fff;border-color:#7f9c78}
+
+  /* ---------- client brief card ---------- */
+  #brief{position:absolute;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+         width:min(330px,86vw);z-index:22;background:rgba(255,252,246,.96);border:2.5px solid #d9c8b0;
+         border-radius:18px;padding:10px 12px;box-shadow:0 8px 20px rgba(90,70,50,.18);display:none}
+  #brief.show{display:block}
+  #brief .who{display:flex;gap:8px;align-items:center}
+  #brief .ava{width:38px;height:38px;border-radius:50%;background:#e8d9c4;display:flex;align-items:center;justify-content:center;font-size:1.35rem;border:2px solid #d9c8b0}
+  #brief .nm{font-weight:700;font-size:.92rem;color:#5a4a3a}
+  #brief .brieff{font-size:.82rem;color:#6b5b4a;margin-top:5px;line-height:1.35}
+  #brief .brieff b{color:#9c6b4f}
+  .swatchDot{display:inline-block;width:13px;height:13px;border-radius:50%;vertical-align:-2px;border:1.5px solid rgba(0,0,0,.15);margin:0 1px}
+
+  /* ---------- bottom sheet ---------- */
+  #sheet{position:absolute;left:0;right:0;bottom:0;z-index:30;
+         background:rgba(255,251,244,.96);border-top:3px solid #d9c8b0;border-radius:22px 22px 0 0;
+         box-shadow:0 -8px 24px rgba(90,70,50,.15);padding:8px 10px calc(10px + env(safe-area-inset-bottom))}
+  #tabs{display:flex;gap:5px;justify-content:center;margin-bottom:6px}
+  .tab{font-family:inherit;font-weight:700;font-size:.78rem;border:2px solid #d9c8b0;background:#fbf5ea;
+       border-radius:999px;padding:5px 12px;color:#6b5b4a;cursor:pointer}
+  .tab.on{background:#b76e79;color:#fff;border-color:#b76e79}
+  .rowLabel{font-size:.64rem;font-weight:700;letter-spacing:.8px;color:#a08a6f;margin:4px 0 3px;text-transform:uppercase}
+  #items,#chips{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:none}
+  #items::-webkit-scrollbar,#chips::-webkit-scrollbar{display:none}
+  .item{flex:0 0 auto;width:74px;border:2px solid #d9c8b0;border-radius:14px;background:#fffdf8;
+        padding:6px 4px 5px;text-align:center;cursor:pointer;position:relative}
+  .item.sel{border-color:#b76e79;box-shadow:0 0 0 3px rgba(183,110,121,.25)}
+  .item .em{font-size:1.45rem;line-height:1.15}
+  .item .nm{font-size:.62rem;font-weight:700;color:#6b5b4a;margin-top:2px;line-height:1.1}
+  .item .lk{position:absolute;top:-6px;right:-5px;background:#e8d9c4;border:1.5px solid #cbb79c;color:#6b5b4a;
+            font-size:.58rem;font-weight:700;border-radius:999px;padding:1px 6px}
+  .item.locked{opacity:.62}
+  .chip{flex:0 0 auto;border-radius:12px;border:2px solid #d9c8b0;background:#fffdf8;cursor:pointer;
+        height:34px;min-width:34px;display:flex;align-items:center;justify-content:center;padding:0 7px}
+  .chip .dot{width:20px;height:20px;border-radius:50%}
+  .chip.sel{border-color:#b76e79;box-shadow:0 0 0 3px rgba(183,110,121,.25)}
+  .chip .pnm{font-size:.6rem;font-weight:700;color:#6b5b4a}
+  #present{display:block;width:min(280px,86%);margin:7px auto 0;font-family:inherit;font-weight:700;font-size:.95rem;
+           border:none;border-radius:999px;padding:10px 0;background:linear-gradient(180deg,#c98d94,#b76e79);
+           color:#fff;cursor:pointer;box-shadow:0 4px 0 #97525e}
+  #present:active{transform:translateY(3px);box-shadow:0 1px 0 #97525e}
+
+  /* ---------- overlays ---------- */
+  .ov{position:absolute;inset:0;background:rgba(74,59,44,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}
+  .ov.show{display:flex}
+  .card{background:#fffdf8;border:3px solid #d9c8b0;border-radius:24px;max-width:330px;width:100%;
+        padding:20px 18px;text-align:center;box-shadow:0 16px 40px rgba(60,45,30,.3)}
+  .card h1{margin:0 0 6px;font-size:1.3rem;color:#5a4a3a}
+  .card p{margin:6px 0;font-size:.9rem;line-height:1.45;color:#6b5b4a;font-weight:600}
+  .card .stars{font-size:1.9rem;margin:4px 0}
+  .card button{font-family:inherit;font-weight:700;font-size:.95rem;border:none;border-radius:999px;
+        padding:10px 22px;background:linear-gradient(180deg,#9db38f,#7f9c78);color:#fff;cursor:pointer;
+        box-shadow:0 4px 0 #5f7a58;margin-top:10px}
+  .card button:active{transform:translateY(3px);box-shadow:0 1px 0 #5f7a58}
+  #resTip{font-size:.8rem;color:#9c6b4f;background:#f7ecdd;border-radius:12px;padding:7px 10px;margin-top:8px}
+  #sndBtn{position:absolute;top:calc(8px + env(safe-area-inset-top));right:10px;z-index:21;
+          font-family:inherit;border:2px solid #d9c8b0;background:rgba(255,252,246,.9);border-radius:999px;
+          padding:4px 9px;font-size:.8rem;cursor:pointer;color:#6b5b4a}
+  .ownerSay{position:absolute;left:12px;bottom:calc(var(--sheet-h,210px) + 14px);z-index:18;
+            background:rgba(255,252,246,.95);border:2px solid #d9c8b0;border-radius:14px;border-bottom-left-radius:4px;
+            padding:7px 11px;font-size:.78rem;font-weight:700;color:#6b5b4a;max-width:210px;line-height:1.3;
+            box-shadow:0 4px 10px rgba(90,70,50,.15)}
+</style>
+</head>
+<body>
+<div id="stage">
+  <svg id="scene" viewBox="0 0 390 700" preserveAspectRatio="xMidYMin meet" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="wallG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#f9f2e7"/><stop offset="1" stop-color="#efe1cd"/>
+      </linearGradient>
+      <linearGradient id="floorG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#e0c9ab"/><stop offset="1" stop-color="#cdb190"/>
+      </linearGradient>
+      <radialGradient id="blob1"><stop offset="0" stop-color="#e8b4b8" stop-opacity=".5"/><stop offset="1" stop-color="#e8b4b8" stop-opacity="0"/></radialGradient>
+      <radialGradient id="blob2"><stop offset="0" stop-color="#a8bf9f" stop-opacity=".4"/><stop offset="1" stop-color="#a8bf9f" stop-opacity="0"/></radialGradient>
+      <radialGradient id="blob3"><stop offset="0" stop-color="#bfe0e3" stop-opacity=".45"/><stop offset="1" stop-color="#bfe0e3" stop-opacity="0"/></radialGradient>
+      <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#5a4632" flood-opacity=".18"/>
+      </filter>
+      <filter id="fab" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency=".012 .02" numOctaves="2" seed="7" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="3"/>
+      </filter>
+      <pattern id="pFloral" width="26" height="26" patternUnits="userSpaceOnUse">
+        <circle cx="7" cy="7" r="2.6" fill="#fff" opacity=".5"/><circle cx="19" cy="17" r="2" fill="#fff" opacity=".4"/>
+        <path d="M13 6 q3 3 0 6 q-3 -3 0 -6" fill="#fff" opacity=".35"/>
+      </pattern>
+      <pattern id="pStripes" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="6" height="14" fill="#fff" opacity=".4"/>
+      </pattern>
+      <pattern id="pDots" width="16" height="16" patternUnits="userSpaceOnUse">
+        <circle cx="4" cy="4" r="2" fill="#fff" opacity=".45"/><circle cx="12" cy="12" r="2" fill="#fff" opacity=".45"/>
+      </pattern>
+      <pattern id="pGeo" width="24" height="24" patternUnits="userSpaceOnUse">
+        <path d="M12 4 l3 5 l-3 5 l-3 -5 Z" fill="#fff" opacity=".4"/>
+        <path d="M0 20 l3 -4 l3 4 Z M18 20 l3 -4 l3 4 Z" fill="#fff" opacity=".3"/>
+      </pattern>
+      <pattern id="pTrim" width="10" height="10" patternUnits="userSpaceOnUse">
+        <circle cx="5" cy="5" r="1.6" fill="#fff" opacity=".55"/>
+      </pattern>
+    </defs>
+
+    <!-- backdrop -->
+    <rect width="390" height="700" fill="url(#wallG)"/>
+    <circle cx="60" cy="120" r="95" fill="url(#blob1)"/>
+    <circle cx="335" cy="95" r="85" fill="url(#blob2)"/>
+    <circle cx="320" cy="300" r="90" fill="url(#blob3)"/>
+    <rect y="470" width="390" height="230" fill="url(#floorG)"/>
+    <path d="M0 470 h390" stroke="#c4ab8a" stroke-width="3"/>
+
+    <!-- window with rain (right) -->
+    <g id="window">
+      <rect x="258" y="70" width="112" height="150" rx="12" fill="#dcecf2" stroke="#cbb79c" stroke-width="7"/>
+      <line x1="314" y1="74" x2="314" y2="216" stroke="#cbb79c" stroke-width="5"/>
+      <line x1="262" y1="145" x2="366" y2="145" stroke="#cbb79c" stroke-width="5"/>
+      <g id="rainG" opacity=".8"></g>
+    </g>
+
+    <!-- shelf + plant (left) -->
+    <g filter="url(#soft)">
+      <rect x="18" y="200" width="98" height="9" rx="4" fill="#cbb79c"/>
+      <path d="M52 200 q-11 -26 4 -36 q3 14 9 18 q4 -20 -2 -30 q18 8 12 30 q-2 8 -6 18 Z" fill="#7f9c78"/>
+      <rect x="46" y="196" width="26" height="16" rx="4" fill="#b76e79" opacity=".85"/>
+    </g>
+
+    <!-- owner vignette (bottom-left) -->
+    <g id="owner" filter="url(#soft)">
+      <ellipse cx="64" cy="648" rx="34" ry="7" fill="#5a4632" opacity=".12"/>
+      <path d="M44 648 q0 -26 20 -26 q20 0 20 26 Z" fill="#7fa7b5"/>
+      <path d="M64 585 a19 19 0 0 1 19 19 q0 6 -3 9 l-32 0 q-3 -3 -3 -9 a19 19 0 0 1 19 -19 Z" fill="#4f7f8f"/>
+      <path d="M45 604 q19 -16 38 0 l3 8 q-22 -10 -44 0 Z" fill="#3f6b78"/>
+      <circle cx="64" cy="598" r="13" fill="#f2d4b8"/>
+      <path d="M51 596 a13 13 0 0 1 26 0 q-4 -10 -13 -10 q-9 0 -13 10 Z" fill="#4f7f8f"/>
+      <circle cx="59" cy="599" r="1.4" fill="#4a3f35"/><circle cx="69" cy="599" r="1.4" fill="#4a3f35"/>
+      <path d="M60 605 q4 3 8 0" stroke="#c76e6e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      <rect x="42" y="632" width="44" height="7" rx="3.5" fill="#a9825a"/>
+      <rect x="36" y="626" width="12" height="9" rx="2" fill="#e8d9c4"/>
+    </g>
+
+    <!-- mannequin + garments -->
+    <g id="manq" filter="url(#soft)">
+      <ellipse cx="196" cy="636" rx="72" ry="11" fill="#5a4632" opacity=".14"/>
+      <rect x="192" y="300" width="8" height="316" rx="4" fill="#a9825a"/>
+      <path d="M150 626 q46 -22 92 0 l6 8 q-52 -18 -104 0 Z" fill="#a9825a"/>
+      <rect x="184" y="286" width="24" height="22" rx="8" fill="#a9825a"/>
+      <path d="M196 96 C174 98 164 108 160 124 C154 150 152 180 158 206 C162 224 166 240 168 254 C172 276 178 290 196 292 C214 290 220 276 224 254 C226 240 230 224 234 206 C240 180 238 150 232 124 C228 108 218 98 196 96 Z"
+            fill="#f4ead9" stroke="#d9c8b0" stroke-width="2.5"/>
+      <path d="M172 130 q24 -14 48 0" stroke="#e6d7c3" stroke-width="2" fill="none"/>
+    </g>
+    <g id="layerDress"></g>
+    <g id="layerOuter"></g>
+    <g id="layerHijab"></g>
+    <g id="layerAcc"></g>
+    <g id="layerShoes"></g>
+    <g id="fxG"></g>
+  </svg>
+
+  <div id="hud">
+    <span class="pill">🪙 <span id="coinTxt">10</span></span>
+    <span class="pill">⭐ <span id="starTxt">0</span></span>
+  </div>
+  <button id="sndBtn">🔊</button>
+  <div id="modeBtns">
+    <button class="modeBtn on" id="mJobs">📋 Clients</button>
+    <button class="modeBtn" id="mFree">🎨 My Studio</button>
+  </div>
+
+  <div id="brief">
+    <div class="who">
+      <div class="ava" id="bAva">👩</div>
+      <div>
+        <div class="nm" id="bName">Client</div>
+        <div class="brieff" id="bText"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ownerSay" id="ownerSay">Welcome to the atelier! 🌸</div>
+
+  <div id="sheet">
+    <div id="tabs">
+      <button class="tab on" data-cat="dress">Dress</button>
+      <button class="tab" data-cat="outer">Outer</button>
+      <button class="tab" data-cat="hijab">Hijab</button>
+      <button class="tab" data-cat="shoes">Shoes</button>
+      <button class="tab" data-cat="acc">Extra</button>
+    </div>
+    <div class="rowLabel">Pieces</div>
+    <div id="items"></div>
+    <div id="styleRows">
+      <div class="rowLabel">Colour</div>
+      <div id="chips"></div>
+    </div>
+    <button id="present">✨ Present the Look</button>
+  </div>
+
+  <div class="ov show" id="startOv">
+    <div class="card">
+      <h1>🧕 Modest Atelier</h1>
+      <p>Welcome! I'm <b>Sana</b> — this is my little fashion studio.<br>Clients come with a wish: an occasion, a favourite colour, a budget of taste.<br>You style the look on the mannequin. Elegant, modest, yours. ✨</p>
+      <p>Finish looks to earn 🪙 coins and ⭐ stars —<br>and the studio grows with new fabrics and pieces!</p>
+      <button id="btnStart">▶ Open the Atelier</button>
+    </div>
+  </div>
+
+  <div class="ov" id="clientOv">
+    <div class="card">
+      <div style="font-size:2.2rem" id="cAva">👩</div>
+      <h1 id="cName">New client!</h1>
+      <p id="cText" style="text-align:left"></p>
+      <button id="btnAccept">💌 Accept the brief</button>
+    </div>
+  </div>
+
+  <div class="ov" id="resOv">
+    <div class="card">
+      <h1 id="rTitle">She loves it!</h1>
+      <div class="stars" id="rStars">⭐⭐⭐</div>
+      <p id="rText"></p>
+      <div id="resTip"></div>
+      <button id="rNext">Next client ➜</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+window.__errs=[];
+window.onerror=(m,s,l)=>{window.__errs.push(m+' @'+l);};
+const $=id=>document.getElementById(id);
+const SVGNS='http://www.w3.org/2000/svg';
+const R=Math.random;
+function el(tag,attrs,parent){const n=document.createElementNS(SVGNS,tag);for(const k in attrs)n.setAttribute(k,attrs[k]);(parent).appendChild(n);return n;}
+
+/* ---------------- palettes & patterns ---------------- */
+const FAMILIES=[
+  {id:'rose',   name:'Rose',      cols:['#eec3c6','#d98c94','#b76e79']},
+  {id:'sage',   name:'Sage',      cols:['#d5e0cc','#a8bf9f','#7f9c78']},
+  {id:'sea',    name:'Sea & Sky', cols:['#cfe6e8','#8fc0ca','#4f8a99']},
+  {id:'sand',   name:'Sand',      cols:['#f5efe1','#e6d3b8','#c9a97c']},
+  {id:'spice',  name:'Spice',     cols:['#f0d3a6','#d99a63','#b06a3f']},
+  {id:'plum',   name:'Plum',      cols:['#e0d1ef','#b39ddb','#7d5ba6']},
+];
+const COLORS={};FAMILIES.forEach(f=>f.cols.forEach(c=>COLORS[c]=f.id));
+const PATTERNS=[
+  {id:'solid',name:'Plain',pat:null},
+  {id:'pFloral',name:'Blossom',pat:'url(#pFloral)'},
+  {id:'pStripes',name:'Stripes',pat:'url(#pStripes)'},
+  {id:'pDots',name:'Dots',pat:'url(#pDots)'},
+  {id:'pGeo',name:'Stars',pat:'url(#pGeo)'},
+];
+
+/* ---------------- garments ---------------- */
+/* tags: occasions this piece suits. price 0 = unlocked from start */
+const GARMS={
+  dress:{
+    longdress:{n:'Long Dress',e:'👗',price:0,tags:['eid','jumuah','wedding','tea','school'],draw:dressPath({flare:26,waist:158,hem:372,sleeve:'cap'})},
+    abaya:{n:'Abaya',e:'🥼',price:0,tags:['eid','jumuah','wedding','school'],draw:dressPath({flare:34,waist:170,hem:376,straight:true,sleeve:'long',belt0:true})},
+    kaftan:{n:'Kaftan',e:'👘',price:5,tags:['eid','wedding','tea'],draw:dressPath({flare:40,waist:168,hem:370,sleeve:'wide',trim:true})},
+    kurtaset:{n:'Kurta + Trousers',e:'🧍',price:0,tags:['school','jumuah','eid','sports'],draw:kurtaDraw},
+    skirtset:{n:'Blouse + Skirt',e:'👚',price:4,tags:['school','tea','jumuah'],draw:skirtDraw},
+    sportset:{n:'Sport Tunic Set',e:'🎽',price:5,tags:['sports'],draw:sportDraw},
+  },
+  outer:{
+    cardigan:{n:'Cardigan',e:'🧥',price:0,tags:['school','tea','winter','jumuah'],draw:outerDraw({len:296,sleeve:'long',open:.6})},
+    coat:{n:'Long Coat',e:'🧥',price:5,tags:['winter','jumuah','school'],draw:outerDraw({len:340,sleeve:'long',open:.9,buttons:true})},
+    kimono:{n:'Kimono Jacket',e:'👘',price:5,tags:['eid','tea','wedding'],draw:outerDraw({len:280,sleeve:'wide',open:1})},
+    vest:{n:'Quilted Vest',e:'🦺',price:4,tags:['winter','sports','school'],draw:outerDraw({len:250,sleeve:'none',open:.5,quilt:true})},
+  },
+  hijab:{
+    classic:{n:'Classic Drape',e:'🧕',price:0,tags:['eid','jumuah','wedding','tea','school'],draw:hijabDraw('classic')},
+    shayla:{n:'Long Shayla',e:'🧣',price:3,tags:['eid','wedding','jumuah'],draw:hijabDraw('shayla')},
+    volume:{n:'Soft Wrap',e:'🌸',price:4,tags:['tea','eid','school','wedding'],draw:hijabDraw('volume')},
+    sport:{n:'Sport Headband',e:'🎾',price:3,tags:['sports'],draw:hijabDraw('sport')},
+  },
+  shoes:{
+    flats:{n:'Flats',e:'🥿',price:0,tags:['school','tea','jumuah','eid','wedding'],draw:shoeDraw('flats')},
+    boots:{n:'Boots',e:'👢',price:0,tags:['winter','school','jumuah'],draw:shoeDraw('boots')},
+    sneakers:{n:'Sneakers',e:'👟',price:0,tags:['sports','school'],draw:shoeDraw('sneakers')},
+    mary:{n:'Mary Janes',e:'👣',price:4,tags:['tea','eid','wedding'],draw:shoeDraw('mary')},
+    loafers:{n:'Loafers',e:'👞',price:3,tags:['school','jumuah','tea'],draw:shoeDraw('loafers')},
+  },
+  acc:{
+    none:{n:'None',e:'🚫',price:0,tags:[],draw:g=>{}},
+    belt:{n:'Belt',e:'🎗️',price:0,tags:['school','jumuah','winter'],draw:accDraw('belt')},
+    brooch:{n:'Flower Brooch',e:'🌼',price:3,tags:['eid','wedding','tea','jumuah'],draw:accDraw('brooch')},
+    bag:{n:'Handbag',e:'👜',price:0,tags:['tea','eid','school','wedding'],draw:accDraw('bag')},
+    pin:{n:'Pearl Pin',e:'📌',price:3,tags:['wedding','eid','jumuah','tea'],draw:accDraw('pin')},
+    scarf:{n:'Neck Scarf',e:'🧣',price:3,tags:['winter','tea','school'],draw:accDraw('scarf')},
+  },
+};
+const CATS=['dress','outer','hijab','shoes','acc'];
+
+/* ------------- garment drawing (paths on mannequin) ------------- */
+function dressPath(o){
+  return function(g,look){
+    const c=look.colDress, pat=patOf(look.patDress);
+    const flare=o.flare,waistY=o.waist,hem=o.hem;
+    const hemL=196-(30+flare),hemR=196+(30+flare);
+    const uxL=156,uxR=236,shL=162,shR=230;
+    const d=`M196 100 C176 102 166 112 ${shL} 128 L${uxL} 168 `+
+      `C${uxL-6} ${waistY} ${hemL+(o.straight?4:14)} ${hem-62} ${hemL} ${hem} `+
+      `L${hemR} ${hem} C${hemR-(o.straight?4:14)} ${hem-62} ${uxR+6} ${waistY} ${uxR} 168 `+
+      `L${shR} 128 C${shR-4} 112 ${shR-16} 102 196 100 Z`;
+    el('path',{d,fill:c,stroke:shade(c,-30),'stroke-width':2.2,filter:'url(#fab)'},g);
+    if(pat)el('path',{d,fill:pat},g);
+    if(o.sleeve==='cap'){
+      el('path',{d:'M162 126 q-16 6 -20 24 q14 8 26 2 Z',fill:c,stroke:shade(c,-30),'stroke-width':2},g);
+      el('path',{d:'M230 126 q16 6 20 24 q-14 8 -26 2 Z',fill:c,stroke:shade(c,-30),'stroke-width':2},g);
+    }else if(o.sleeve==='long'){
+      el('path',{d:'M162 124 q-22 26 -18 78 q2 18 12 30 q10 -2 12 -14 q-4 -44 6 -70 Z',fill:c,stroke:shade(c,-30),'stroke-width':2},g);
+      el('path',{d:'M230 124 q22 26 18 78 q-2 18 -12 30 q-10 -2 -12 -14 q4 -44 -6 -70 Z',fill:c,stroke:shade(c,-30),'stroke-width':2},g);
+    }else if(o.sleeve==='wide'){
+      el('path',{d:'M162 122 q-40 30 -34 96 q2 12 16 12 q8 -4 6 -18 q-6 -50 16 -74 Z',fill:c,stroke:shade(c,-30),'stroke-width':2},g);
+      el('path',{d:'M230 122 q40 30 34 96 q-2 12 -16 12 q-8 -4 -6 -18 q6 -50 -16 -74 Z',fill:c,stroke:shade(c,-30),'stroke-width':2},g);
+    }
+    el('path',{d:'M182 102 q14 14 28 0',fill:'none',stroke:shade(c,-30),'stroke-width':2},g);
+    if(o.straight){el('line',{x1:196,y1:104,x2:196,y2:hem-6,stroke:shade(c,-22),'stroke-width':1.6,'stroke-dasharray':'1 6'},g);}
+    if(o.belt0){el('rect',{x:166,y:196,width:60,height:9,rx:4.5,fill:shade(c,-38)},g);}
+    if(o.trim){el('path',{d:`M${hemL+4} ${hem-14} L${hemR-4} ${hem-14}`,stroke:'#fff','stroke-width':5,opacity:.55},g);}
+  };
+}
+function kurtaDraw(g,look){
+  const c=look.colDress, pat=patOf(look.patDress);
+  const d='M196 100 C176 102 166 112 162 128 L158 168 C154 204 156 250 160 288 L232 288 C236 250 238 204 234 168 L230 128 C226 112 216 102 196 100 Z';
+  el('path',{d,fill:c,stroke:shade(c,-30),'stroke-width':2.2,filter:'url(#fab)'},g);
+  if(pat)el('path',{d,fill:pat},g);
+  el('path',{d:'M162 124 q-20 24 -14 70 q10 6 18 -2 q-4 -40 6 -58 Z',fill:c,stroke:shade(c,-30),'stroke-width':2},g);
+  el('path',{d:'M230 124 q20 24 14 70 q-10 6 -18 -2 q4 -40 -6 -58 Z',fill:c,stroke:shade(c,-30),'stroke-width':2},g);
+  // trousers
+  const t=shade(c,-45);
+  el('path',{d:'M168 286 L164 372 L188 372 L192 300 Z',fill:t,stroke:shade(t,-18),'stroke-width':2},g);
+  el('path',{d:'M224 286 L228 372 L204 372 L200 300 Z',fill:t,stroke:shade(t,-18),'stroke-width':2},g);
+  el('rect',{x:170,y:282,width:52,height:10,rx:5,fill:shade(c,-30)},g);
+}
+function skirtDraw(g,look){
+  const c=look.colDress, pat=patOf(look.patDress);
+  // blouse
+  el('path',{d:'M196 100 C178 102 168 112 164 128 L160 176 L232 176 L228 128 C224 112 214 102 196 100 Z',fill:shade(c,20),stroke:shade(c,-25),'stroke-width':2.2},g);
+  el('path',{d:'M186 100 q10 10 20 0',fill:'none',stroke:shade(c,-30),'stroke-width':2},g);
+  el('path',{d:'M164 124 q-18 22 -12 62 q10 6 16 -2 q-4 -36 4 -52 Z',fill:shade(c,20),stroke:shade(c,-25),'stroke-width':2},g);
+  el('path',{d:'M228 124 q18 22 12 62 q-10 6 -16 -2 q4 -36 -4 -52 Z',fill:shade(c,20),stroke:shade(c,-25),'stroke-width':2},g);
+  // skirt
+  const d='M160 172 L152 200 C144 250 136 320 128 372 L264 372 C256 320 248 250 240 200 L232 172 Z';
+  el('path',{d,fill:c,stroke:shade(c,-30),'stroke-width':2.2,filter:'url(#fab)'},g);
+  if(pat)el('path',{d,fill:pat},g);
+  for(let i=0;i<5;i++){el('line',{x1:168+i*14,y1:180,x2:156+i*19,y2:368,stroke:shade(c,-18),'stroke-width':1.2},g);}
+}
+function sportDraw(g,look){
+  const c=look.colDress, pat=patOf(look.patDress);
+  el('path',{d:'M196 102 C180 104 172 114 168 128 L164 170 C162 210 164 246 168 268 L224 268 C228 246 230 210 228 170 L224 128 C220 114 212 104 196 102 Z',fill:c,stroke:shade(c,-30),'stroke-width':2.2},g);
+  if(pat)el('path',{d:'M196 102 C180 104 172 114 168 128 L164 170 C162 210 164 246 168 268 L224 268 C228 246 230 210 228 170 L224 128 C220 114 212 104 196 102 Z',fill:pat},g);
+  el('path',{d:'M168 126 q-24 22 -18 60 q10 6 16 -2 q-6 -34 4 -48 Z',fill:c,stroke:shade(c,-30),'stroke-width':2},g);
+  el('path',{d:'M224 126 q24 22 18 60 q-10 6 -16 -2 q6 -34 -4 -48 Z',fill:c,stroke:shade(c,-30),'stroke-width':2},g);
+  const t=shade(c,-48);
+  el('path',{d:'M170 266 L166 372 L190 372 L194 300 Z',fill:t},g);
+  el('path',{d:'M222 266 L226 372 L202 372 L198 300 Z',fill:t},g);
+  el('rect',{x:166,y:262,width:60,height:9,rx:4.5,fill:shade(c,-20)},g);
+  el('path',{d:'M168 128 q28 16 56 0',stroke:'#fff','stroke-width':4,opacity:.5,fill:'none'},g);
+}
+function outerDraw(o){
+  return function(g,look){
+    if(look.outer===null||!GARMS.outer[look.outer])return;
+    const c=look.colOuter||'#a8bf9f', pat=patOf(look.patOuter);
+    const L=o.len;
+    const d=`M196 102 C176 104 166 114 162 130 L156 172 C150 210 148 ${L-60} ${L>300?128:138} ${L} L${L>300?264:254} ${L} C${244} ${L-60} 242 210 236 172 L230 130 C226 114 216 104 196 102 Z`;
+    el('path',{d,fill:c,stroke:shade(c,-32),'stroke-width':2.4,opacity:.96,filter:'url(#fab)'},g);
+    if(pat)el('path',{d,fill:pat,opacity:.8},g);
+    // open front
+    el('path',{d:`M196 108 L186 170 L${L>300?150:158} ${L-6} L196 ${L-2} Z`,fill:'#f4ead9',opacity:.28},g);
+    if(o.sleeve==='long'){
+      el('path',{d:`M162 128 q-26 30 -20 90 q2 20 14 32 q12 -2 14 -16 q-6 -54 6 -82 Z`,fill:c,stroke:shade(c,-32),'stroke-width':2},g);
+      el('path',{d:`M230 128 q26 30 20 90 q-2 20 -14 32 q-12 -2 -14 -16 q6 -54 -6 -82 Z`,fill:c,stroke:shade(c,-32),'stroke-width':2},g);
+    }else if(o.sleeve==='wide'){
+      el('path',{d:'M162 126 q-44 34 -36 104 q2 14 18 14 q10 -4 7 -20 q-8 -54 16 -80 Z',fill:c,stroke:shade(c,-32),'stroke-width':2},g);
+      el('path',{d:'M230 126 q44 34 36 104 q-2 14 -18 14 q-10 -4 -7 -20 q8 -54 -16 -80 Z',fill:c,stroke:shade(c,-32),'stroke-width':2},g);
+    }else if(o.sleeve==='none'){
+      el('path',{d:'M162 128 q-12 8 -14 26 q12 6 22 0 Z',fill:c,stroke:shade(c,-32),'stroke-width':2},g);
+      el('path',{d:'M230 128 q12 8 14 26 q-12 6 -22 0 Z',fill:c,stroke:shade(c,-32),'stroke-width':2},g);
+    }
+    if(o.buttons){for(let i=0;i<5;i++)el('circle',{cx:200,cy:150+i*34,r:3,fill:'#fffdf8',stroke:shade(c,-40),'stroke-width':1},g);}
+    if(o.quilt){for(let i=0;i<4;i++)el('path',{d:`M158 ${180+i*24} q38 12 76 0`,stroke:shade(c,-30),'stroke-width':1.6,fill:'none'},g);}
+  };
+}
+function hijabDraw(style){
+  return function(g,look){
+    const c=look.colHijab||'#8fc0ca', pat=patOf(look.patHijab);
+    if(style==='classic'){
+      const d='M172 96 q24 -20 48 0 q8 4 10 16 l6 22 q-14 40 -34 44 l-16 -6 q-8 -30 -14 -60 Z';
+      el('path',{d,fill:c,stroke:shade(c,-30),'stroke-width':2.2,filter:'url(#fab)'},g);
+      if(pat)el('path',{d,fill:pat},g);
+      el('path',{d:'M176 100 q20 26 40 0 q-8 -12 -20 -12 q-12 0 -20 12 Z',fill:shade(c,18)},g);
+      el('path',{d:'M196 116 q-14 34 -8 62 q10 6 16 -2 q-6 -30 4 -60 Z',fill:c,stroke:shade(c,-30),'stroke-width':2},g);
+    }else if(style==='shayla'){
+      const d='M170 94 q26 -22 52 0 q10 6 12 20 q10 44 2 104 q-8 10 -18 4 q4 -56 -4 -96 q-8 -14 -22 -14 q-14 0 -20 16 q-6 44 0 92 q-8 8 -18 2 q-8 -56 -2 -102 q2 -14 8 -24 Z';
+      el('path',{d,fill:c,stroke:shade(c,-30),'stroke-width':2.2,filter:'url(#fab)'},g);
+      if(pat)el('path',{d,fill:pat},g);
+      el('path',{d:'M178 96 q18 24 36 0 q-8 -10 -18 -10 q-10 0 -18 10 Z',fill:shade(c,18)},g);
+    }else if(style==='volume'){
+      const d='M168 92 q28 -24 56 0 q14 8 16 26 q4 24 -6 40 q-16 14 -38 14 q-22 0 -38 -14 q-10 -16 -6 -40 q2 -18 16 -26 Z';
+      el('path',{d,fill:c,stroke:shade(c,-30),'stroke-width':2.2,filter:'url(#fab)'},g);
+      if(pat)el('path',{d,fill:pat},g);
+      el('path',{d:'M178 96 q18 22 36 0 q-8 -10 -18 -10 q-10 0 -18 10 Z',fill:shade(c,16)},g);
+      el('path',{d:'M172 128 q24 12 48 0',stroke:shade(c,-24),'stroke-width':2,fill:'none'},g);
+    }else if(style==='sport'){
+      el('path',{d:'M172 94 q24 -18 48 0 q4 4 4 10 q-28 10 -56 0 q0 -6 4 -10 Z',fill:c,stroke:shade(c,-30),'stroke-width':2},g);
+      el('path',{d:'M176 108 q20 8 40 0 l-2 6 q-18 6 -36 0 Z',fill:shade(c,-18)},g);
+    }
+  };
+}
+function shoeDraw(style){
+  return function(g,look){
+    const c=look.colShoes||'#c9a97c';
+    const s=shade(c,-25);
+    if(style==='boots'){
+      el('path',{d:'M160 372 l-4 26 q0 8 8 8 l20 0 q4 0 4 -6 l2 -28 Z',fill:c,stroke:s,'stroke-width':2},g);
+      el('path',{d:'M232 372 l4 26 q0 8 -8 8 l-20 0 q-4 0 -4 -6 l-2 -28 Z',fill:c,stroke:s,'stroke-width':2},g);
+      el('rect',{x:156,y:398,width:36,height:7,rx:3.5,fill:s},g);
+      el('rect',{x:200,y:398,width:36,height:7,rx:3.5,fill:s},g);
+    }else{
+      const h=style==='sneakers'?16:12;
+      el('path',{d:`M158 388 q-2 ${h-4} 10 ${h-2} l18 0 q8 -2 6 -10 l-2 -12 Z`,fill:c,stroke:s,'stroke-width':2},g);
+      el('path',{d:`M234 388 q2 ${h-4} -10 ${h-2} l-18 0 q-8 -2 -6 -10 l2 -12 Z`,fill:c,stroke:s,'stroke-width':2},g);
+      el('rect',{x:154,y:398,width:38,height:6,rx:3,fill:'#fffdf8'},g);
+      el('rect',{x:200,y:398,width:38,height:6,rx:3,fill:'#fffdf8'},g);
+      if(style==='mary'){el('line',{x1:166,y1:378,x2:186,y2:378,stroke:'#fffdf8','stroke-width':2.5},g);
+        el('line',{x1:226,y1:378,x2:206,y2:378,stroke:'#fffdf8','stroke-width':2.5},g);}
+      if(style==='sneakers'){el('circle',{cx:170,cy:384,r:2.4,fill:'#fffdf8'},g);el('circle',{cx:222,cy:384,r:2.4,fill:'#fffdf8'},g);}
+    }
+  };
+}
+function accDraw(style){
+  return function(g,look){
+    const c=look.colAcc||'#b76e79';
+    if(style==='belt'){el('rect',{x:162,y:206,width:68,height:10,rx:5,fill:shade(c,-15),stroke:shade(c,-40),'stroke-width':1.6},g);
+      el('rect',{x:189,y:204,width:14,height:14,rx:3,fill:'#e6d3b8',stroke:shade(c,-40),'stroke-width':1.4},g);}
+    if(style==='brooch'){for(let i=0;i<6;i++){const a=i/6*Math.PI*2;
+      el('ellipse',{cx:176+Math.cos(a)*7,cy:132+Math.sin(a)*7,rx:5,ry:3.4,fill:c,transform:`rotate(${a*57.3} 176 132)`},g);}
+      el('circle',{cx:176,cy:132,r:3.4,fill:'#f5efe1'},g);}
+    if(style==='bag'){el('path',{d:'M236 220 q10 -8 16 0',stroke:shade(c,-30),'stroke-width':3,fill:'none'},g);
+      el('rect',{x:224,y:220,width:30,height:24,rx:7,fill:c,stroke:shade(c,-35),'stroke-width':2},g);
+      el('circle',{cx:239,cy:232,r:3,fill:'#f5efe1'},g);}
+    if(style==='pin'){el('circle',{cx:216,cy:108,r:4,fill:'#fffdf8',stroke:shade(c,-30),'stroke-width':1.4},g);
+      el('circle',{cx:216,cy:108,r:1.6,fill:c},g);}
+    if(style==='scarf'){el('path',{d:'M182 108 q14 18 28 0 l4 8 q-18 22 -36 0 Z',fill:c,stroke:shade(c,-30),'stroke-width':1.8},g);}
+  };
+}
+function patOf(id){const p=PATTERNS.find(p=>p.id===id);return p?p.pat:null;}
+function shade(hex,amt){
+  const n=parseInt(hex.slice(1),16);
+  let r=(n>>16)+amt,g=((n>>8)&255)+amt,b=(n&255)+amt;
+  r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));
+  return '#'+((r<<16)|(g<<8)|b).toString(16).padStart(6,'0');
+}
+
+/* ---------------- occasions & clients ---------------- */
+const OCCASIONS=[
+  {id:'eid',e:'🌙',name:'Eid day',need:['festive'],tip:'Festive pieces: kaftan, blossom fabric, a brooch or pearl pin.'},
+  {id:'wedding',e:'💐',name:'a wedding',need:['festive'],tip:'Elegant formal: kaftan or abaya + shayla + special shoes.'},
+  {id:'jumuah',e:'🕌',name:'Jumu\'ah',need:['neat'],tip:'Neat and calm: abaya or kurta set + classic drape.'},
+  {id:'school',e:'🎒',name:'a school day',need:['comfy'],tip:'Comfy and easy: kurta set or long dress + flats or sneakers.'},
+  {id:'sports',e:'🏸',name:'sports club',need:['sporty'],tip:'Sport tunic set + sneakers + sport headband.'},
+  {id:'winter',e:'❄️',name:'a cold day',need:['warm'],tip:'Something warm! Add a coat or cardigan and boots.'},
+  {id:'tea',e:'🫖',name:'a tea party',need:['festive'],tip:'Soft and pretty: blouse + skirt or kaftan + mary janes.'},
+];
+const NAMES=['Layla','Noor','Hafsa','Maryam','Amina','Zahra','Sumayya','Yasmin','Sofia','Elif','Zaynab','Khadija'];
+const LOOK={
+  dress:'longdress',outer:null,hijab:'classic',shoes:'flats',acc:null,
+  colDress:'#d98c94',colOuter:'#a8bf9f',colHijab:'#8fc0ca',colShoes:'#c9a97c',colAcc:'#b76e79',
+  patDress:'solid',patOuter:'solid',patHijab:'solid',
+};
+const S={started:false,mode:'jobs',coins:10,stars:0,clientN:0,
+         client:null,look:{...LOOK},selCat:'dress',
+         unlocked:{},sound:true,lookSaved:null};
+
+/* ---------------- persistence ---------------- */
+function save(){try{localStorage.setItem('modestAtelier',JSON.stringify({coins:S.coins,stars:S.stars,unlocked:S.unlocked,look:S.look,clientN:S.clientN}));}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem('modestAtelier'));if(d){S.coins=d.coins??10;S.stars=d.stars??0;S.unlocked=d.unlocked||{};S.look={...LOOK,...d.look};S.clientN=d.clientN||0;}}catch(e){}}
+load();
+
+/* ---------------- sound (ambient only, no music) ---------------- */
+let AC=null,master=null,rainSrc=null,rainGain=null;
+function audioInit(){
+  if(!S.sound)return null;
+  if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();
+    master=AC.createGain();master.gain.value=.55;master.connect(AC.destination);
+  }catch(e){return null;}}
+  if(AC.state==='suspended')AC.resume();
+  startRain();
+  return AC;
+}
+function startRain(){
+  if(!AC||rainSrc)return;
+  const len=AC.sampleRate*2,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=R()*2-1;
+  rainSrc=AC.createBufferSource();rainSrc.buffer=buf;rainSrc.loop=true;
+  const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=900;
+  const f2=AC.createBiquadFilter();f2.type='highpass';f2.frequency.value=400;
+  rainGain=AC.createGain();rainGain.gain.value=.028;
+  rainSrc.connect(f);f.connect(f2);f2.connect(rainGain);rainGain.connect(master);rainSrc.start();
+}
+function tone(f,dur,type='sine',vol=.2,when=0){
+  const ac=audioInit();if(!ac)return;
+  const t=ac.currentTime+when,o=ac.createOscillator(),g=AC.createGain();
+  o.type=type;o.frequency.value=f;
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.012);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.05);
+}
+function swish(){ // fabric
+  const ac=audioInit();if(!ac)return;
+  const len=AC.sampleRate*.22,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=(R()*2-1)*(1-i/len);
+  const s=AC.createBufferSource();s.buffer=buf;
+  const f=AC.createBiquadFilter();f.type='bandpass';f.frequency.value=2400;f.Q.value=.8;
+  const g=AC.createGain();g.gain.value=.16;
+  s.connect(f);f.connect(g);g.connect(master);s.start();
+}
+const sCup=()=>{tone(1180,.09,'sine',.16);tone(1480,.1,'sine',.14,.09);};
+const sCoin=()=>{tone(988,.07,'triangle',.2);tone(1319,.12,'triangle',.2,.07);};
+const sStar=i=>tone(659+i*165,.16,'sine',.22,i*.14);
+const sPop=()=>tone(520,.06,'triangle',.18);
+
+/* ---------------- rendering ---------------- */
+const layers={dress:$('layerDress'),outer:$('layerOuter'),hijab:$('layerHijab'),shoes:$('layerShoes'),acc:$('layerAcc')};
+function renderLook(){
+  CATS.forEach(cat=>{
+    layers[cat].innerHTML='';
+    const g=Object.keys(GARMS[cat]).find(k=>k===S.look[cat]);
+    if(cat==='outer'&&(!S.look.outer||!g))return;
+    if(cat==='acc'&&(!S.look.acc))return;
+    GARMS[cat][g].draw(layers[cat],S.look);
+  });
+}
+function renderHUD(){
+  $('coinTxt').textContent=S.coins;
+  $('starTxt').textContent=S.stars;
+}
+function ownerSay(t){$('ownerSay').innerHTML=t;}
+function renderBrief(){
+  const b=$('brief');
+  if(S.mode!=='jobs'||!S.client){b.classList.remove('show');return;}
+  b.classList.add('show');
+  $('bAva').textContent=S.client.occ.e;
+  $('bName').textContent=S.client.name+' — '+S.client.occ.name;
+  const f=FAMILIES.find(f=>f.id===S.client.family);
+  const dots=f.cols.map(c=>`<span class="swatchDot" style="background:${c}"></span>`).join(' ');
+  $('bText').innerHTML=`${S.client.wish}<br>Wishes for <b>${f.name}</b> tones ${dots}`;
+}
+/* tabs + items + chips */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on');S.selCat=t.dataset.cat;renderItems();sPop();
+  });
+});
+function isUnlocked(cat,id){const g=GARMS[cat][id];return g.price===0||S.unlocked[cat+'.'+id];}
+function renderItems(){
+  const box=$('items');box.innerHTML='';
+  const cat=S.selCat;
+  Object.entries(GARMS[cat]).forEach(([id,g])=>{
+    const d=document.createElement('div');
+    const sel=S.look[cat]===id||(cat==='outer'&&!S.look.outer&&id==='none');
+    d.className='item'+(sel?' sel':'')+(!isUnlocked(cat,id)?' locked':'');
+    d.innerHTML=`<div class="em">${g.e}</div><div class="nm">${g.n}</div>`+
+      (!isUnlocked(cat,id)?`<div class="lk">🪙 ${g.price}</div>`:'');
+    d.addEventListener('click',()=>{
+      if(!isUnlocked(cat,id)){
+        if(S.coins>=g.price){
+          S.coins-=g.price;S.unlocked[cat+'.'+id]=true;
+          sCoin();ownerSay('A new piece for the studio! ✨');save();renderHUD();renderItems();
+        }else{sPop();ownerSay('Not enough coins yet — finish a look or two! 🪙');}
+        return;
+      }
+      if(cat==='outer')S.look.outer=(S.look.outer===id?null:id);
+      else if(cat==='acc')S.look.acc=(S.look.acc===id?null:id);
+      else S.look[cat]=id;
+      swish();renderLook();renderItems();renderChips();save();
+    });
+    box.appendChild(d);
+  });
+}
+function renderChips(){
+  const box=$('chips');box.innerHTML='';
+  const cat=S.selCat;
+  const colKey='col'+cat[0].toUpperCase()+cat.slice(1);
+  const patKey='pat'+cat[0].toUpperCase()+cat.slice(1);
+  FAMILIES.forEach(f=>f.cols.forEach(c=>{
+    const d=document.createElement('div');
+    d.className='chip'+(S.look[colKey]===c?' sel':'');
+    d.innerHTML=`<span class="dot" style="background:${c}"></span>`;
+    d.addEventListener('click',()=>{S.look[colKey]=c;swish();renderLook();renderChips();save();});
+    box.appendChild(d);
+  }));
+  if(GARMS[cat][S.look[cat]]&&GARMS[cat][S.look[cat]].tags){ // patterns for fabric pieces
+    PATTERNS.forEach(p=>{
+      const d=document.createElement('div');
+      d.className='chip'+(S.look[patKey]===p.id?' sel':'');
+      d.innerHTML=`<span class="pnm">${p.name}</span>`;
+      d.addEventListener('click',()=>{S.look[patKey]=p.id;swish();renderLook();renderChips();save();});
+      box.appendChild(d);
+    });
+  }
+}
+/* rain animation */
+(function(){
+  const g=$('rainG');
+  for(let i=0;i<14;i++){
+    const x=262+R()*104;
+    el('line',{x1:x,y1:74,x2:x-3,y2:84,stroke:'#a8c8d4','stroke-width':1.6,'stroke-linecap':'round',opacity:.6},g);
+  }
+  setInterval(()=>{
+    g.querySelectorAll('line').forEach(l=>{
+      const y=parseFloat(l.getAttribute('y1'))+3+R()*4;
+      if(y>214){l.setAttribute('y1',74);l.setAttribute('y2',84);}
+      else{l.setAttribute('y1',y);l.setAttribute('y2',y+10);}
+    });
+  },90);
+})();
+
+/* ---------------- clients & scoring ---------------- */
+function makeClient(){
+  const occ=OCCASIONS[S.clientN%OCCASIONS.length];
+  const fam=FAMILIES[(S.clientN*3+1)%FAMILIES.length];
+  const name=NAMES[(S.clientN*5+2)%NAMES.length];
+  const wishes=[
+    `Something lovely for <b>${occ.name}</b>!`,
+    `I need an outfit for <b>${occ.name}</b>.`,
+    `Can you style me for <b>${occ.name}</b>?`,
+  ];
+  S.client={name,occ,family:fam.id,fam,wish:wishes[S.clientN%3]};
+  S.clientN++;
+  save();
+}
+function showClientCard(){
+  $('cAva').textContent=S.client.occ.e;
+  $('cName').textContent=S.client.name;
+  const f=S.client.fam;
+  const dots=f.cols.map(c=>`<span class="swatchDot" style="background:${c}"></span>`).join(' ');
+  $('cText').innerHTML=`"${S.client.wish.replace(/<[^>]*>/g,'')}"<br><br>Colour wish: <b>${f.name}</b> ${dots}`;
+  $('clientOv').classList.add('show');
+  sCup();
+}
+function tagsOf(look){
+  const t=[];
+  ['dress','outer','hijab','shoes','acc'].forEach(cat=>{
+    const id=look[cat];if(id&&GARMS[cat][id])t.push(...GARMS[cat][id].tags);
+  });
+  return t;
+}
+function scoreLook(){
+  const tags=tagsOf(S.look);
+  const brief=S.client;
+  let pts=0,tips=[];
+  const need=brief.occ.id;
+  // occasion match per slot
+  const slots={dress:S.look.dress,outer:S.look.outer,hijab:S.look.hijab,shoes:S.look.shoes,acc:S.look.acc};
+  let matches=0;
+  Object.entries(slots).forEach(([cat,id])=>{
+    if(id&&GARMS[cat][id]&&GARMS[cat][id].tags.includes(need))matches++;
+  });
+  if(matches>=2){pts+=2;}
+  else if(matches===1){pts+=1;tips.push('More pieces that suit the occasion would help!');}
+  else tips.push(brief.occ.tip);
+  // winter needs outer, sports needs sportset+sneakers
+  if(need==='winter'&&!S.look.outer){tips.push('It\'s cold — she needs a coat or cardigan!');}
+  else if(need==='winter')pts+=1;
+  if(need==='sports'){if(S.look.dress==='sportset')pts+=1;else tips.push('The sport tunic set is perfect for this!');
+    if(S.look.shoes==='sneakers')pts+=1;else tips.push('Sneakers for running around!');}
+  // colour wish
+  const cols=[S.look.colDress,S.look.colOuter,S.look.colHijab,S.look.colShoes,S.look.colAcc];
+  const famUsed=new Set(cols.map(c=>COLORS[c]).filter(f=>f===brief.family));
+  if(famUsed.size>0)pts+=2;
+  else tips.push(`She wished for <b>${brief.fam.name}</b> tones — try those colours!`);
+  // coordination: dress+hijab+outer share a family
+  const famDress=COLORS[S.look.colDress],famHijab=COLORS[S.look.colHijab];
+  if(S.look.colHijab&&(famDress===famHijab||isHarmony(famDress,famHijab)))pts+=1;
+  // pattern bonus
+  if(S.look.patDress&&S.look.patDress!=='solid')pts+=.5;
+  const stars=pts>=5?3:pts>=3.5?2:1;
+  return {stars,pts,tips:[...new Set(tips)].slice(0,2)};
+}
+function isHarmony(a,b){
+  const H={rose:['plum','sand','sage'],sage:['sand','sea','rose'],sea:['sand','sage','plum'],
+           sand:['rose','sage','sea','spice'],spice:['sand','plum','rose'],plum:['rose','sea','sand','spice']};
+  return (H[a]||[]).includes(b);
+}
+$('present').addEventListener('click',()=>{
+  if(S.mode!=='jobs'){save();ownerSay('Saved to your studio! 💛');sCup();return;}
+  if(!S.client){nextClient();return;}
+  const r=scoreLook();
+  const earn=1+r.stars;
+  S.coins+=earn;S.stars+=r.stars;
+  S.lookSaved={...S.look};
+  save();renderHUD();
+  $('rTitle').textContent=r.stars===3?'She loves it! 💕':r.stars===2?'She likes it! 😊':'A sweet start 🌱';
+  $('rStars').textContent='⭐'.repeat(r.stars)+'☆'.repeat(3-r.stars);
+  const lines=[
+    '"Exactly what I hoped for — thank you!"',
+    '"I feel beautiful and comfortable. Barakallahu feeki!"',
+    '"Everyone will ask where I got this!"',
+  ];
+  $('rText').innerHTML=`${lines[Math.min(r.stars,2)]}<br><b>+🪙 ${earn}</b> coins`;
+  $('resTip').innerHTML=r.stars===3?'Perfect styling! ✨':(r.tips.join('<br>')||'Lovely!');
+  $('resOv').classList.add('show');
+  for(let i=0;i<r.stars;i++)sStar(i);
+  sCoin();
+  sparkle();
+});
+function sparkle(){
+  const g=$('fxG');
+  for(let i=0;i<16;i++){
+    const c=el('text',{x:150+R()*90,y:250+R()*160,'font-size':10+R()*8,fill:['#eec3c6','#b39ddb','#8fc0ca','#d99a63'][i%4]},g);
+    c.textContent='✦';
+    let t=0;
+    const iv=setInterval(()=>{t+=.08;
+      c.setAttribute('y',parseFloat(c.getAttribute('y'))-1.2);
+      c.setAttribute('opacity',Math.max(0,1-t));
+      if(t>=1){clearInterval(iv);c.remove();}
+    },50);
+  }
+}
+function nextClient(){
+  makeClient();
+  renderBrief();
+  showClientCard();
+}
+$('rNext').addEventListener('click',()=>{
+  $('resOv').classList.remove('show');
+  nextClient();
+});
+$('btnAccept').addEventListener('click',()=>{
+  $('clientOv').classList.remove('show');
+  ownerSay(`Style ${S.client.name}'s look — follow her wish! 🌸`);
+  renderBrief();sPop();
+});
+/* modes */
+$('mJobs').addEventListener('click',()=>{
+  S.mode='jobs';$('mJobs').classList.add('on');$('mFree').classList.remove('on');
+  $('present').textContent='✨ Present the Look';
+  if(!S.client)makeClient();
+  renderBrief();ownerSay('A new client is waiting! 📋');
+});
+$('mFree').addEventListener('click',()=>{
+  S.mode='free';$('mFree').classList.add('on');$('mJobs').classList.remove('on');
+  $('present').textContent='💛 Save this look';
+  $('brief').classList.remove('show');
+  ownerSay('Your studio — style freely! 🎨');
+});
+$('sndBtn').addEventListener('click',()=>{
+  S.sound=!S.sound;
+  $('sndBtn').textContent=S.sound?'🔊':'🔇';
+  if(master)master.gain.value=S.sound?.55:0;
+  if(rainGain)rainGain.gain.value=S.sound?.028:0;
+  if(S.sound)audioInit();
+});
+$('btnStart').addEventListener('click',()=>{
+  audioInit();sCup();
+  $('startOv').classList.remove('show');
+  S.started=true;
+  makeClient();renderBrief();showClientCard();
+  ownerSay('Assalamu alaikum! First client is here 🌸');
+});
+
+/* ---------------- layout: sheet height var ---------------- */
+function setSheetH(){document.documentElement.style.setProperty('--sheet-h',$('sheet').offsetHeight+'px');}
+addEventListener('resize',setSheetH);
+
+/* ---------------- init ---------------- */
+renderLook();renderHUD();renderItems();renderChips();setSheetH();
+
+/* ---------------- test hooks ---------------- */
+window.__ma={
+  S,LOOK,GARMS,OCCASIONS,FAMILIES,
+  get client(){return S.client;},
+  renderLook,renderItems,renderChips,renderBrief,
+  scoreLook,makeClient,showClientCard,
+  start(){document.getElementById('btnStart').click();},
+  accept(){document.getElementById('btnAccept').click();},
+  present(){document.getElementById('present').click();},
+  nextRes(){document.getElementById('rNext').click();},
+  setItem(cat,id){S.look[cat]=id;renderLook();},
+  setColor(cat,c){S.look['col'+cat[0].toUpperCase()+cat.slice(1)]=c;renderLook();},
+  setPat(cat,p){S.look['pat'+cat[0].toUpperCase()+cat.slice(1)]=p;renderLook();},
+};
+})();
+</script>
+</body>
+</html>
